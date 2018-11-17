@@ -11,7 +11,6 @@ from repeat_queries.utils import convert_epoch_to_datetime
 from repeat_queries.models import Request, SQLQuery
 
 
-
 class NormalCursorWrapper(object):
     """
     Wraps a cursor and logs queries.
@@ -118,36 +117,21 @@ class NormalCursorWrapper(object):
         self.close()
 
 
-
 def wrap_cursor(connection, logger):
     if not hasattr(connection, 'custom_cursor'):
         connection.custom_cursor = connection.cursor
 
         def cursor(*args, **kwargs):
-            # Per the DB API cursor() does not accept any arguments. There's
-            # some code in the wild which does not follow that convention,
-            # so we pass on the arguments even though it's not clean.
-            # See:
-            # https://github.com/jazzband/django-debug-toolbar/pull/615
-            # https://github.com/jazzband/django-debug-toolbar/pull/896
             return NormalCursorWrapper(connection.custom_cursor(*args, **kwargs), connection, logger)
 
         connection.cursor = cursor
         return cursor
-
-    # cursor = connection.cursor
-    # connection.cursor = NormalCursorWrapper(cursor, connection, logger)
-    # return connection.cursor
 
 
 def unwrap_cursor(connection, logger):
     if hasattr(connection, 'custom_cursor'):
         del connection.custom_cursor
         del connection.cursor
-
-    pass
-    # cursor = connection.cursor
-    # connection.cursor = NormalCursorWrapper(cursor, connection, logger)
 
 
 class SqlRecorder(object):
@@ -173,7 +157,6 @@ class SqlRecorder(object):
 
     def record_request(self, request):
         # When we start a request, let's create request object
-        # import ipdb; ipdb.set_trace()
         self.profile = {
             # 'func_name': func_name,
             # 'name': self.name,
@@ -187,7 +170,6 @@ class SqlRecorder(object):
         }
         request = Request.objects.create(**self.profile)
         self.request = request
-
 
     def record(self, alias, **kwargs):
         self._queries.append((alias, kwargs))
@@ -219,22 +201,6 @@ class SqlRecorder(object):
             return (query['raw_sql'], saferepr(raw_params))
 
         if self._queries:
-            # width_ratio_tally = 0
-            # factor = int(256.0 / (len(self._databases) * 2.5))
-            # for n, db in enumerate(self._databases.values()):
-            #     rgb = [0, 0, 0]
-            #     color = n % 3
-            #     rgb[color] = 256 - n // 3 * factor
-            #     nn = color
-            #     # XXX: pretty sure this is horrible after so many aliases
-            #     while rgb[color] < factor:
-            #         nc = min(256 - rgb[color], 256)
-            #         rgb[color] += nc
-            #         nn += 1
-            #         if nn > 2:
-            #             nn = 0
-            #         rgb[nn] = nc
-            #     db['rgb_color'] = rgb
 
             trans_ids = {}
             trans_id = None
@@ -254,34 +220,6 @@ class SqlRecorder(object):
                         query['starts_trans'] = True
                 if trans_id:
                     query['in_trans'] = True
-
-                # query['alias'] = alias
-                # if 'iso_level' in query:
-                #     query['iso_level'] = get_isolation_level_display(query['vendor'],
-                #                                                      query['iso_level'])
-                # if 'trans_status' in query:
-                #     query['trans_status'] = get_transaction_status_display(query['vendor'],
-                #                                                            query['trans_status'])
-
-                # query['form'] = SQLSelectForm(auto_id=None, initial=copy(query))
-
-                # if query['sql']:
-                #     query['sql'] = reformat_sql(query['sql'])
-                # query['rgb_color'] = self._databases[alias]['rgb_color']
-                # try:
-                #     query['width_ratio'] = (query['duration'] / self._sql_time) * 100
-                #     query['width_ratio_relative'] = (
-                #         100.0 * query['width_ratio'] / (100.0 - width_ratio_tally))
-                # except ZeroDivisionError:
-                #     query['width_ratio'] = 0
-                #     query['width_ratio_relative'] = 0
-                # query['start_offset'] = width_ratio_tally
-                # query['end_offset'] = query['width_ratio'] + query['start_offset']
-                # width_ratio_tally += query['width_ratio']
-                # query['stacktrace'] = render_stacktrace(query['stacktrace'])
-                # i += 1
-
-                # query['trace_color'] = trace_colors[query['stacktrace']]
 
             if trans_id:
                 self._queries[(i - 1)][1]['ends_trans'] = True

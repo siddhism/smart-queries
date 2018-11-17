@@ -12,16 +12,22 @@ class DuplicateQueryMiddleware(MiddlewareMixin):
         self.recorder = SqlRecorder()
 
     def process_request(self, request):
+        if 'admin' in request.path:
+            return
         self.recorder.enable_instrumentation()
         self.recorder.record_request(request)
         pass
 
     def process_response(self, request, response):
+        if 'admin' in request.path:
+            return response
         self.recorder.disable_instrumentation()
         self.recorder.generate_stats(request, response)
         return response
 
     def process_template_response(self, request, response):
+        if 'admin' in request.path:
+            return response
         self.recorder.disable_instrumentation()
         self.recorder.generate_stats(request, response)
         return response

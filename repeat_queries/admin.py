@@ -7,6 +7,7 @@ from repeat_queries.models import SQLQuery, Request
 
 class SQLQueryAdmin(admin.ModelAdmin):
     list_display = ['query', 'duplicate_count', 'duration', 'request']
+    list_filter = ['request']
     pass
 
 

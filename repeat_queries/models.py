@@ -3,13 +3,8 @@ from __future__ import unicode_literals
 
 from django.db import models
 from django.db import transaction
-from collections import Counter
-import json
-import base64
-import random
 import re
 
-from django.core.files.storage import get_storage_class
 from django.db.models import (
     DateTimeField, TextField, CharField, ForeignKey, IntegerField,
     BooleanField, F, ManyToManyField, OneToOneField, FloatField,
@@ -29,25 +24,6 @@ def _time_taken(start_time, end_time):
 
 def time_taken(self):
     return _time_taken(self.start_time, self.stop_time)
-
-
-class CaseInsensitiveDictionary(dict):
-    def __getitem__(self, key):
-        return super(CaseInsensitiveDictionary, self).__getitem__(key.lower())
-
-    def __setitem__(self, key, value):
-        super(CaseInsensitiveDictionary, self).__setitem__(key.lower(), value)
-
-    def update(self, other=None, **kwargs):
-        for k, v in other.items():
-            self[k] = v
-        for k, v in kwargs.items():
-            self[k] = v
-
-    def __init__(self, d):
-        super(CaseInsensitiveDictionary, self).__init__()
-        for k, v in d.items():
-            self[k] = v
 
 
 # Create your models here.
@@ -116,19 +92,6 @@ class Request(models.Model):
         """
         return sum(x.time_taken for x in SQLQuery.objects.filter(request=self))
 
-    @property
-    def headers(self):
-        if self.encoded_headers:
-            raw = json.loads(self.encoded_headers)
-        else:
-            raw = {}
-
-        return CaseInsensitiveDictionary(raw)
-
-    @property
-    def content_type(self):
-        return self.headers.get('content-type', None)
-
     def save(self, *args, **kwargs):
         # sometimes django requests return the body as 'None'
         if self.raw_body is None:
@@ -152,28 +115,6 @@ class Request(models.Model):
         # Request.garbage_collect(force=False)
 
 
-class SQLQueryManager(models.Manager):
-    def bulk_create(self, *args, **kwargs):
-        """ensure that num_sql_queries remains consistent. Bulk create does not call
-        the model save() method and hence we must add this logic here too"""
-        if len(args):
-            objs = args[0]
-        else:
-            objs = kwargs.get('objs')
-
-        with transaction.atomic():
-            request_counter = Counter([x.request_id for x in objs])
-            requests = Request.objects.filter(pk__in=request_counter.keys())
-            # TODO: Not that there is ever more than one request (but there could be eventually)
-            # but perhaps there is a cleaner way of apply the increment from the counter without iterating
-            # and saving individually? e.g. bulk update but with diff. increments. Couldn't come up with this
-            # off hand.
-            for r in requests:
-                r.num_sql_queries = F('num_sql_queries') + request_counter[r.pk]
-                r.save()
-            return super(SQLQueryManager, self).bulk_create(*args, **kwargs)
-
-
 class SQLQuery(models.Model):
     query = TextField()
     start_time = DateTimeField(null=True, blank=True, default=timezone.now)
@@ -185,7 +126,6 @@ class SQLQuery(models.Model):
     )
     traceback = TextField()
     duplicate_count = IntegerField(blank=True, null=True)
-    objects = SQLQueryManager()
 
     # TODO docstring
     @property

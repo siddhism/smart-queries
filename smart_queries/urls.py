@@ -21,10 +21,8 @@ urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^blog/', include('blog.urls')),
 ]
-if settings.DEBUG:
-    import debug_toolbar
-    urlpatterns = [
-        # For django versions before 2.0:
-        url(r'^__debug__/', include(debug_toolbar.urls)),
-
-    ] + urlpatterns
+# if settings.DEBUG:
+#     import debug_toolbar
+#     urlpatterns = [
+#         url(r'^__debug__/', include(debug_toolbar.urls)),
+#     ] + urlpatterns
