@@ -15,8 +15,20 @@ Including another URLconf
 """
 from django.conf.urls import url, include
 from django.contrib import admin
+from django.conf import settings
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
-    url(r'^', include('blog.urls')),
+    url(r'^blog/', include('blog.urls')),
+    url(r'^silk/', include('silk.urls', namespace='silk'))
 ]
+
+if settings.DEBUG:
+    import debug_toolbar
+    urlpatterns = [
+        url('__debug__/', include(debug_toolbar.urls)),
+
+        # For django versions before 2.0:
+        # url(r'^__debug__/', include(debug_toolbar.urls)),
+
+    ] + urlpatterns

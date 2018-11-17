@@ -38,6 +38,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'blog',
+    'nplusone.ext.django',
+    'silk',
+    'debug_toolbar',
 ]
 
 MIDDLEWARE = [
@@ -48,6 +51,11 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'nplusone.ext.django.NPlusOneMiddleware',
+    # 'silk.middleware.SilkyMiddleware',
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
+    'repeat_queries.middleware.DuplicateQueryMiddleware'
+
 ]
 
 ROOT_URLCONF = 'smart_queries.urls'
@@ -119,3 +127,24 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/1.11/howto/static-files/
 
 STATIC_URL = '/static/'
+
+
+# Custom N + 1 settings
+import logging
+NPLUSONE_LOGGER = logging.getLogger('nplusone')
+NPLUSONE_LOG_LEVEL = logging.WARN
+
+LOGGING = {
+    'version': 1,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'nplusone': {
+            'handlers': ['console'],
+            'level': 'WARN',
+        },
+    },
+}
