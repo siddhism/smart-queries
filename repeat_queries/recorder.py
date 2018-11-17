@@ -4,8 +4,12 @@ import datetime
 from pprint import saferepr
 from django.db import connections
 from django.utils import six
+from django.utils import timezone
 from django.utils.encoding import force_text
 SQL_WARNING_THRESHOLD = 1200
+from repeat_queries.utils import convert_epoch_to_datetime
+from repeat_queries.models import Request, SQLQuery
+
 
 
 class NormalCursorWrapper(object):
@@ -61,10 +65,10 @@ class NormalCursorWrapper(object):
             # else:
             #     stacktrace = []
             # _params = ''
-            try:
-                _params = json.dumps([self._decode(p) for p in params])
-            except TypeError:
-                pass  # object not JSON serializable
+            # try:
+            #     _params = json.dumps([self._decode(p) for p in params])
+            # except TypeError:
+            #     pass  # object not JSON serializable
 
             # template_info = get_template_info()
 
@@ -79,7 +83,7 @@ class NormalCursorWrapper(object):
                     self.cursor, sql, self._quote_params(params)),
                 'duration': duration,
                 'raw_sql': sql,
-                'params': _params,
+                # 'params': _params,
                 'raw_params': params,
                 # 'stacktrace': stacktrace,
                 'start_time': start_time,
@@ -137,6 +141,10 @@ def wrap_cursor(connection, logger):
 
 
 def unwrap_cursor(connection, logger):
+    if hasattr(connection, 'custom_cursor'):
+        del connection.custom_cursor
+        del connection.cursor
+
     pass
     # cursor = connection.cursor
     # connection.cursor = NormalCursorWrapper(cursor, connection, logger)
@@ -152,6 +160,7 @@ class SqlRecorder(object):
         self._databases = {}
         self._transaction_status = {}
         self._transaction_ids = {}
+        self.request = None
 
     def enable_instrumentation(self):
         # This is thread-safe because database connections are thread-local.
@@ -161,6 +170,24 @@ class SqlRecorder(object):
     def disable_instrumentation(self):
         for connection in connections.all():
             unwrap_cursor(connection, self)
+
+    def record_request(self, request):
+        # When we start a request, let's create request object
+        # import ipdb; ipdb.set_trace()
+        self.profile = {
+            # 'func_name': func_name,
+            # 'name': self.name,
+            'path': request.path,
+            'body': request.body,
+            'method': request.method,
+            'start_time': timezone.now()
+            # 'request': DataCollector().request
+            # 'line_num': line_num,
+            # 'dynamic': self._dynamic,
+        }
+        request = Request.objects.create(**self.profile)
+        self.request = request
+
 
     def record(self, alias, **kwargs):
         self._queries.append((alias, kwargs))
@@ -304,6 +331,20 @@ class SqlRecorder(object):
                 pass
         print ('Inside stats recorder generate stats')
         print (self._queries)
+        # import ipdb; ipdb.set_trace()
+        for alias, query in self._queries:
+            k = {
+                'query': query['raw_sql'],
+                'duration': query['duration'],
+                'start_time': convert_epoch_to_datetime(query['start_time']),
+                'stop_time': convert_epoch_to_datetime(query['stop_time']),
+                'duplicate_count': query.get('duplicate_count'),
+                'request': self.request
+            }
+            sql_query = SQLQuery(**k)
+            sql_query.save()
+            print (sql_query)
+
         # self.record_stats({
         #     'databases': sorted(self._databases.items(), key=lambda x: -x[1]['time_spent']),
         #     'queries': [q for a, q in self._queries],

@@ -28,7 +28,7 @@ def _time_taken(start_time, end_time):
 
 
 def time_taken(self):
-    return _time_taken(self.start_time, self.end_time)
+    return _time_taken(self.start_time, self.stop_time)
 
 
 class CaseInsensitiveDictionary(dict):
@@ -70,6 +70,9 @@ class Request(models.Model):
     meta_num_queries = models.IntegerField(null=True, blank=True)
     meta_time_spent_queries = models.FloatField(null=True, blank=True)
     pyprofile = models.TextField(blank=True, default='')
+
+    def __str__(self):
+        return self.path
 
     def _shorten(self, string):
         return '%s...%s' % (string[:94], string[len(string) - 93:])
@@ -146,7 +149,7 @@ class Request(models.Model):
             self.view_name = self._shorten(self.view_name)
 
         super(Request, self).save(*args, **kwargs)
-        Request.garbage_collect(force=False)
+        # Request.garbage_collect(force=False)
 
 
 class SQLQueryManager(models.Manager):
@@ -174,13 +177,14 @@ class SQLQueryManager(models.Manager):
 class SQLQuery(models.Model):
     query = TextField()
     start_time = DateTimeField(null=True, blank=True, default=timezone.now)
-    end_time = DateTimeField(null=True, blank=True)
-    time_taken = FloatField(blank=True, null=True)
+    stop_time = DateTimeField(null=True, blank=True)
+    duration = FloatField(blank=True, null=True)
     request = ForeignKey(
         Request, related_name='queries', null=True,
         blank=True, db_index=True, on_delete=models.CASCADE,
     )
     traceback = TextField()
+    duplicate_count = IntegerField(blank=True, null=True)
     objects = SQLQueryManager()
 
     # TODO docstring
@@ -226,8 +230,8 @@ class SQLQuery(models.Model):
     @transaction.atomic()
     def save(self, *args, **kwargs):
 
-        if self.end_time and self.start_time:
-            interval = self.end_time - self.start_time
+        if self.stop_time and self.start_time:
+            interval = self.stop_time - self.start_time
             self.time_taken = interval.total_seconds() * 1000
 
         if not self.pk:
