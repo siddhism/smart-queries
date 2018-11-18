@@ -57,23 +57,6 @@ class Request(models.Model):
     def total_meta_time(self):
         return (self.meta_time or 0) + (self.meta_time_spent_queries or 0)
 
-    @property
-    def profile_table(self):
-        for n, columns in enumerate(parse_profile(self.pyprofile)):
-            location = columns[-1]
-            if n and '{' not in location and '<' not in location:
-                r = re.compile('(?P<src>.*\.py)\:(?P<num>[0-9]+).*')
-                m = r.search(location)
-                group = m.groupdict()
-                src = group['src']
-                num = group['num']
-                name = 'c%d' % n
-                fmt = '<a name={name} href="?pos={n}&file_path={src}&line_num={num}#{name}">{location}</a>'
-                rep = fmt.format(**dict(group, **locals()))
-                yield columns[:-1] + [mark_safe(rep)]
-            else:
-                yield columns
-
     # defined in atomic transaction within SQLQuery save()/delete() as well
     # as in bulk_create of SQLQueryManager
     # TODO: This is probably a bad way to do this, .count() will prob do?
