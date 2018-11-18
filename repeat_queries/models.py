@@ -126,6 +126,7 @@ class SQLQuery(models.Model):
     )
     traceback = TextField()
     duplicate_count = IntegerField(blank=True, null=True)
+    similar_count = IntegerField(blank=True, null=True)
 
     # TODO docstring
     @property

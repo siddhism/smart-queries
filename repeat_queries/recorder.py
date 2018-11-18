@@ -59,8 +59,10 @@ class NormalCursorWrapper(object):
         finally:
             stop_time = time()
             duration = (stop_time - start_time) * 1000
+            import traceback
+            stacktrace = ''.join(reversed(traceback.format_stack()))
             # if dt_settings.get_config()['ENABLE_STACKTRACES']:
-            #     stacktrace = tidy_stacktrace(reversed(get_stack()))
+                # stacktrace = tidy_stacktrace(reversed(get_stack()))
             # else:
             #     stacktrace = []
             # _params = ''
@@ -84,7 +86,7 @@ class NormalCursorWrapper(object):
                 'raw_sql': sql,
                 # 'params': _params,
                 'raw_params': params,
-                # 'stacktrace': stacktrace,
+                'stacktrace': stacktrace,
                 'start_time': start_time,
                 'stop_time': stop_time,
                 # 'is_slow': duration > dt_settings.get_config()['SQL_WARNING_THRESHOLD'],
@@ -269,7 +271,6 @@ class SqlRecorder(object):
                 pass
         print ('Inside stats recorder generate stats')
         print (self._queries)
-        # import ipdb; ipdb.set_trace()
         for alias, query in self._queries:
             k = {
                 'query': query['raw_sql'],
@@ -277,7 +278,9 @@ class SqlRecorder(object):
                 'start_time': convert_epoch_to_datetime(query['start_time']),
                 'stop_time': convert_epoch_to_datetime(query['stop_time']),
                 'duplicate_count': query.get('duplicate_count'),
-                'request': self.request
+                'similar_count': query.get('similar_count'),
+                'request': self.request,
+                'traceback': query.get('stacktrace')
             }
             sql_query = SQLQuery(**k)
             sql_query.save()
