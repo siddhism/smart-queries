@@ -59,7 +59,8 @@ python manage.py migrate
 python manage.py runserver
 ```
 
-# Hit the home page with 
+* Create some posts and authors
+* Hit the home page with 
 http://127.0.0.1:8000/blog/
-# Check Admin page for all data
+* Check Admin page for all data
 http://127.0.0.1:8000/admin/

@@ -100,6 +100,7 @@ class Request(models.Model):
 
 class SQLQuery(models.Model):
     query = TextField()
+    uuid = models.CharField(max_length=36, default=uuid4)
     start_time = DateTimeField(null=True, blank=True, default=timezone.now)
     stop_time = DateTimeField(null=True, blank=True)
     duration = FloatField(blank=True, null=True)

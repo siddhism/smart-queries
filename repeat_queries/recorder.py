@@ -173,6 +173,13 @@ class SqlRecorder(object):
         request = Request.objects.create(**self.profile)
         self.request = request
 
+    def record_request_end(self, request):
+        from .models import _time_taken
+        if hasattr(self, 'request'):
+            self.request.end_time = timezone.now()
+            self.request.time_taken = _time_taken(self.request.start_time, self.request.end_time)
+            self.request.save()
+
     def record(self, alias, **kwargs):
         self._queries.append((alias, kwargs))
         if alias not in self._databases:
@@ -282,8 +289,8 @@ class SqlRecorder(object):
                 'request': self.request,
                 'traceback': query.get('stacktrace')
             }
-            sql_query = SQLQuery(**k)
-            sql_query.save()
+            sql_query = SQLQuery.objects.create(**k)
+            # sql_query.save()
             print (sql_query)
 
         # self.record_stats({
