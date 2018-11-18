@@ -126,32 +126,6 @@ class SQLQuery(models.Model):
     def num_joins(self):
         return self.query.lower().count('join ')
 
-    @property
-    def tables_involved(self):
-        """
-        A really another rudimentary way to work out tables involved in a
-        query.
-        TODO: Can probably parse the SQL using sqlparse etc and pull out table
-        info that way?
-        """
-        components = [x.strip() for x in self.query.split()]
-        tables = []
-
-        for idx, component in enumerate(components):
-            # TODO: If django uses aliases on column names they will be falsely
-            # identified as tables...
-            if component.lower() == 'from' or component.lower() == 'join' or component.lower() == 'as':
-                try:
-                    _next = components[idx + 1]
-                    if not _next.startswith('('):  # Subquery
-                        stripped = _next.strip().strip(',')
-
-                        if stripped:
-                            tables.append(stripped)
-                except IndexError:  # Reach the end
-                    pass
-        return tables
-
     @transaction.atomic()
     def save(self, *args, **kwargs):
 

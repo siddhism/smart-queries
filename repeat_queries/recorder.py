@@ -36,22 +36,6 @@ class NormalCursorWrapper(object):
             return {key: self._quote_expr(value) for key, value in params.items()}
         return [self._quote_expr(p) for p in params]
 
-    def _decode(self, param):
-        # If a sequence type, decode each element separately
-        if isinstance(param, list) or isinstance(param, tuple):
-            return [self._decode(element) for element in param]
-
-        # If a dictionary type, decode each value separately
-        if isinstance(param, dict):
-            return {key: self._decode(value) for key, value in param.items()}
-
-        # make sure datetime, date and time are converted to string by force_text
-        CONVERT_TYPES = (datetime.datetime, datetime.date, datetime.time)
-        try:
-            return force_text(param, strings_only=not isinstance(param, CONVERT_TYPES))
-        except UnicodeDecodeError:
-            return '(encoded string)'
-
     def _record(self, method, sql, params):
         start_time = time()
         try:
@@ -61,17 +45,6 @@ class NormalCursorWrapper(object):
             duration = (stop_time - start_time) * 1000
             import traceback
             stacktrace = ''.join(reversed(traceback.format_stack()))
-            # if dt_settings.get_config()['ENABLE_STACKTRACES']:
-                # stacktrace = tidy_stacktrace(reversed(get_stack()))
-            # else:
-            #     stacktrace = []
-            # _params = ''
-            # try:
-            #     _params = json.dumps([self._decode(p) for p in params])
-            # except TypeError:
-            #     pass  # object not JSON serializable
-
-            # template_info = get_template_info()
 
             alias = getattr(self.db, 'alias', 'default')
             conn = self.db.connection
@@ -84,14 +57,12 @@ class NormalCursorWrapper(object):
                     self.cursor, sql, self._quote_params(params)),
                 'duration': duration,
                 'raw_sql': sql,
-                # 'params': _params,
                 'raw_params': params,
                 'stacktrace': stacktrace,
                 'start_time': start_time,
                 'stop_time': stop_time,
                 # 'is_slow': duration > dt_settings.get_config()['SQL_WARNING_THRESHOLD'],
                 'is_select': sql.lower().strip().startswith('select'),
-                # 'template_info': template_info,
             }
             print ('From inside the custom cursor record')
             # We keep `sql` to maintain backwards compatibility
@@ -160,15 +131,10 @@ class SqlRecorder(object):
     def record_request(self, request):
         # When we start a request, let's create request object
         self.profile = {
-            # 'func_name': func_name,
-            # 'name': self.name,
             'path': request.path,
             'body': request.body,
             'method': request.method,
             'start_time': timezone.now()
-            # 'request': DataCollector().request
-            # 'line_num': line_num,
-            # 'dynamic': self._dynamic,
         }
         request = Request.objects.create(**self.profile)
         self.request = request
@@ -204,9 +170,6 @@ class SqlRecorder(object):
 
         def duplicate_key(query):
             raw_params = () if query['raw_params'] is None else tuple(query['raw_params'])
-            # saferepr() avoids problems because of unhashable types
-            # (e.g. lists) when used as dictionary keys.
-            # https://github.com/jazzband/django-debug-toolbar/issues/1091
             return (query['raw_sql'], saferepr(raw_params))
 
         if self._queries:
@@ -235,19 +198,17 @@ class SqlRecorder(object):
 
         # Queries are similar / duplicates only if there's as least 2 of them.
         # Also, to hide queries, we need to give all the duplicate groups an id
-        # query_colors = contrasting_color_generator()
-        query_colors = ['red', 'blue']
-        query_similar_colors = {
+        query_similar_groups = {
             alias: {
-                query: (similar_count, 'blue')
+                query: similar_count
                 for query, similar_count in queries.items()
                 if similar_count >= 2
             }
             for alias, queries in query_similar.items()
         }
-        query_duplicates_colors = {
+        query_duplicates_groups = {
             alias: {
-                query: (duplicate_count, 'blue')
+                query: duplicate_count
                 for query, duplicate_count in queries.items()
                 if duplicate_count >= 2
             }
@@ -256,26 +217,11 @@ class SqlRecorder(object):
 
         for alias, query in self._queries:
             try:
-                (query["similar_count"], query["similar_color"]) = (
-                    query_similar_colors[alias][similar_key(query)]
-                )
-                (query["duplicate_count"], query["duplicate_color"]) = (
-                    query_duplicates_colors[alias][duplicate_key(query)]
-                )
+                query["similar_count"] = query_similar_groups[alias][similar_key(query)]
+                query["duplicate_count"] = query_duplicates_groups[alias][duplicate_key(query)]
             except KeyError:
                 pass
 
-        for alias, alias_info in self._databases.items():
-            try:
-                # TODO : that's what we want
-                alias_info["similar_count"] = sum(
-                    e[0] for e in query_similar_colors[alias].values()
-                )
-                alias_info["duplicate_count"] = sum(
-                    e[0] for e in query_duplicates_colors[alias].values()
-                )
-            except KeyError:
-                pass
         print ('Inside stats recorder generate stats')
         print (self._queries)
         for alias, query in self._queries:
@@ -292,9 +238,3 @@ class SqlRecorder(object):
             sql_query = SQLQuery.objects.create(**k)
             # sql_query.save()
             print (sql_query)
-
-        # self.record_stats({
-        #     'databases': sorted(self._databases.items(), key=lambda x: -x[1]['time_spent']),
-        #     'queries': [q for a, q in self._queries],
-        #     'sql_time': self._sql_time,
-        # })
