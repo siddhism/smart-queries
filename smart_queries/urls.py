@@ -20,6 +20,7 @@ from django.contrib import admin
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^blog/', include('blog.urls')),
+    url(r'^dashboard/', include('repeat_queries.urls')),
 ]
 # if settings.DEBUG:
 #     import debug_toolbar

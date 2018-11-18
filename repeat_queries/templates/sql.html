@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+</head>
+<body>
+<p>Requested URL : {{rp_request}}</p>
+<hr>
+<div>
+    {% for query in queries %}
+        <p>Query : {{query.query}}</p>
+        <p>Duration : {{query.duration}}</p>
+        <p>Start_time : {{query.start_time}}</p>
+        <p>Stop_time : {{query.stop_time}}</p>
+        <p>Duplicate_count : {{query.duplicate_count}}</p>
+        <p>Similar_count : {{query.similar_count}}</p>
+        <p>Request : {{query.request}}</p>
+        <!-- {{query.traceback}} -->
+        <br>
+        <hr>
+    {% endfor %}    
+</div>
+</body>
+</html>

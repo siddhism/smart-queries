@@ -2,6 +2,7 @@
 from __future__ import unicode_literals
 
 from django.contrib import admin
+from django.core.urlresolvers import reverse
 from repeat_queries.models import SQLQuery, Request
 
 
@@ -12,7 +13,13 @@ class SQLQueryAdmin(admin.ModelAdmin):
 
 
 class RequestAdmin(admin.ModelAdmin):
-    pass
+    list_display = ['id', 'view_report']
+
+    def view_report(self, obj):
+        tag = '<a href="%s">%s</a>'%(reverse('request_sql', kwargs={'request_id': obj.id}), 'View Report of Request')
+        return tag
+
+    view_report.allow_tags = True
 
 
 admin.site.register(Request, RequestAdmin)
