@@ -64,3 +64,8 @@ python manage.py runserver
 http://127.0.0.1:8000/blog/
 * Check Admin page for all data
 http://127.0.0.1:8000/admin/
+
+
+## Future Enhancements
+
+* Support async storing of Requests and Queries from middleware, so that it doesn't add overhead to all APIs.
